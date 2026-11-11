@@ -24,7 +24,13 @@ const CONFIG = {
     if (tMin < 19) return 2;   // una capa ligera
     return 1;                  // sin capa
   },
-  lluviaUmbral: 50,           // % de probabilidad para considerar "llueve"
+  lluviaUmbral: 50,
+  // Perfil de estilo (sacado de tus fotos de Pinterest). Se usa en las reglas y, en la Fase 2, se le envía a Gemini.
+  perfilEstilo: "Smart casual / business casual. Paleta: azul marino, gris, beige/caqui, verde olivo, café, blanco y celeste. " +
+    "Firma: camisa de cuello (celeste o blanca) debajo de suéter liso de cuello redondo, V o media cremallera, con el cuello asomando. " +
+    "Siempre contraste claro/oscuro entre arriba y pantalón (suéter oscuro + chino beige, o suéter claro + pantalón azul marino). " +
+    "Pantalones: chinos o jeans oscuros. Zapatos de cuero café (mocasines, derby, botines) o tenis blancos. Casi todo liso, pocos estampados.",
+  paleta: ["azul marino", "gris", "beige", "verde", "cafe", "café", "blanco", "negro", "camel", "crema"],           // % de probabilidad para considerar "llueve"
   diasSinUsoMax: 30,          // tope para el puntaje de rotación
 };
 
@@ -204,7 +210,7 @@ function generarCombinaciones(ocasion, relajado = false) {
     const piezas = [b, ca, pa, z].filter(Boolean);
     const v = evaluar(piezas, b, pa, ocasion);
     if (v) {
-      if (abrigo === 3 && ca && (ca.abrigo || 2) >= 3) v.puntaje += 4;
+      if (abrigo === 3 && ca && (ca.abrigo || 2) >= 3) v.puntaje += 1.5;
       combos.push({ base: b, capa: ca, pantalon: pa, zapatos: z, ...v });
     }
   }
@@ -233,6 +239,7 @@ function evaluar(piezas, base, pantalon, ocasion) {
   }
   let puntaje = rot / piezas.length;
   if (colores.length === 2) puntaje -= 3;
+  puntaje += puntosEstilo(piezas, base, pantalon, ocasion);
   // En obra, los colores claros se ensucian: penalización (no se excluyen)
   if (CONFIG.ocasiones[ocasion].obra && ["blanco", "beige", "crema"].includes(base.color_base)) puntaje -= 8;
   // Cerca del centro del rango de la ocasión = mejor
@@ -245,6 +252,48 @@ function evaluar(piezas, base, pantalon, ocasion) {
   if (repetido) puntaje -= 15;
   puntaje += Math.random() * 3; // un poco de variedad
   return { puntaje, colores, prom, masOlvidada };
+}
+
+// Reglas de tu estilo: suman o restan puntos (no prohíben)
+const NIVEL = { claro: 3, medio: 2, oscuro: 1 };
+function puntosEstilo(piezas, base, pantalon, ocasion) {
+  let pts = 0;
+  const capa = piezas.find((p) => TIPOS_CAPA.includes(p.tipo));
+  const zapatos = piezas.find((p) => p.tipo === "zapatos");
+  const sub = (p) => (p?.subtipo || "").toLowerCase();
+  // 1) Tu firma: camisa de cuello debajo de un suéter liso
+  if (capa && capa.tipo === "sueter" && !sub(capa).includes("capucha")) {
+    if (base.tipo === "camisa" || sub(base).includes("polo")) pts += 3;
+    if (base.patron === "estampado") pts -= 4;
+  }
+  // 1b) Contraste entre la camisa y la capa: que el cuello se note (camisa clara bajo suéter oscuro, o al revés)
+  if (capa && base.tono && capa.tono) {
+    const d = Math.abs(NIVEL[base.tono] - NIVEL[capa.tono]);
+    if (d >= 1) pts += 3;
+    if (base.tono === "oscuro" && capa.tono === "oscuro") pts -= 5;
+  }
+  // El fleece y los sudaderos son deportivos: fuera de casual/obra restan
+  if (capa && /fleece|capucha/.test(sub(capa)) && !["casual", "obra"].includes(ocasion)) pts -= 3;
+  // 2) Contraste claro/oscuro entre lo que se ve arriba y el pantalón
+  const arriba = capa || base;
+  if (pantalon && pantalon.tono && arriba.tono) {
+    const dif = Math.abs(NIVEL[arriba.tono] - NIVEL[pantalon.tono]);
+    if (dif >= 1) pts += 2;
+    if (arriba.tono === "oscuro" && pantalon.tono === "oscuro") pts -= 4;
+  }
+  // 3) Paleta: tus colores suman; los muy encendidos restan fuera de casual/salida
+  const formal = !["casual", "salida", "obra"].includes(ocasion);
+  for (const p of piezas) {
+    const enPaleta = CONFIG.paleta.includes(p.color_base) || (p.color_base === "azul" && p.tono === "claro");
+    if (enPaleta) pts += 0.5;
+    else if (formal && ["naranja", "rojo", "amarillo", "morado"].includes(p.color_base)) pts -= 2;
+  }
+  // 4) Zapatos: café con azul marino/gris/beige/verde; negro no va con café o beige
+  if (zapatos && pantalon) {
+    if (["cafe", "café"].includes(zapatos.color_base) && ["azul marino", "gris", "beige", "verde", "azul"].includes(pantalon.color_base)) pts += 2;
+    if (zapatos.color_base === "negro" && ["cafe", "café", "beige"].includes(pantalon.color_base)) pts -= 3;
+  }
+  return pts;
 }
 
 function avisos(c, info) {
