@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#1f2a30">
+  <title>Mi Clóset</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" href="icon-192.png">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header>
+    <h1>Mi Clóset</h1>
+    <nav>
+      <button class="tab activa" data-vista="hoy">Hoy</button>
+      <button class="tab" data-vista="closet">Clóset</button>
+      <button class="tab" data-vista="historial">Historial</button>
+    </nav>
+  </header>
+
+  <main>
+    <!-- ===== HOY ===== -->
+    <section id="vista-hoy" class="vista">
+      <div class="tarjeta contexto">
+        <div id="clima-texto">Cargando clima…</div>
+        <details>
+          <summary>Cambiar clima / hora</summary>
+          <label>Temperatura (°C) <input type="number" id="temp-manual" min="0" max="40"></label>
+          <label>Lluvia probable <input type="checkbox" id="lluvia-manual"></label>
+          <label>Momento
+            <select id="momento-manual">
+              <option value="">Automático</option>
+              <option value="manana">Mañana</option>
+              <option value="tarde">Tarde</option>
+              <option value="noche">Noche</option>
+            </select>
+          </label>
+          <button id="aplicar-manual" class="sec">Aplicar</button>
+          <button id="usar-auto" class="sec">Volver a automático</button>
+        </details>
+      </div>
+
+      <div id="ocasiones" class="chips"></div>
+
+      <div id="resultado"></div>
+    </section>
+
+    <!-- ===== CLÓSET ===== -->
+    <section id="vista-closet" class="vista oculta">
+      <div class="fila-acciones">
+        <select id="filtro-tipo">
+          <option value="">Todas</option>
+          <option value="camisa">Camisas</option>
+          <option value="playera">Playeras</option>
+          <option value="sueter">Suéteres</option>
+          <option value="chaqueta">Chaquetas</option>
+          <option value="pantalon">Pantalones</option>
+          <option value="zapatos">Zapatos</option>
+        </select>
+        <label class="check"><input type="checkbox" id="solo-lavanderia"> Solo en lavandería</label>
+      </div>
+      <button id="todo-limpio" class="sec ancho">🧺 Ya lavé todo (sacar todo de lavandería)</button>
+      <p class="ayuda">Toca una prenda para mandarla a la lavandería o sacarla.</p>
+      <div id="grid-closet" class="grid"></div>
+    </section>
+
+    <!-- ===== HISTORIAL ===== -->
+    <section id="vista-historial" class="vista oculta">
+      <div id="lista-historial"></div>
+      <div class="tarjeta">
+        <h3>Respaldo</h3>
+        <p class="ayuda">Tu historial vive solo en este teléfono. Exporta un respaldo de vez en cuando (guárdalo en Drive, por ejemplo).</p>
+        <button id="exportar" class="sec">⬇️ Exportar respaldo</button>
+        <label class="boton-archivo sec">⬆️ Importar respaldo
+          <input type="file" id="importar" accept="application/json" hidden>
+        </label>
+        <p id="ultimo-respaldo" class="ayuda"></p>
+      </div>
+    </section>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>
